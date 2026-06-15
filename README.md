@@ -11,6 +11,8 @@ Semua endpoint berjalan di server yang sama dengan instance dan **memanggil CLI 
 | `deploy.php`  | Clone repo app-runner menjadi instance baru di `../<instance_name>`, **opsional langsung install**.    |
 | `install.php` | Install instance (yang sudah di-clone) secara non-interaktif. Sekali pakai.                            |
 | `update.php`  | Migrasi schema instance dengan alur **plan/apply** (lihat dulu rencananya, setujui, baru jalan).       |
+| `uninstall.php`| Hapus instance permanen: hapus folder, opsional drop database.                                        |
+| `ping.php`    | Health check + daftar instance (folder) yang dikelola control plane.                                   |
 | `lib.php`     | Konfigurasi (`API_KEY`) & fungsi bersama untuk semua endpoint di atas.                                 |
 | `deploy.sh`   | Script shell `git clone` yang dipanggil oleh `deploy.php`.                                             |
 
@@ -60,6 +62,39 @@ openssl rand -hex 32
 - `git` dan `bash` tersedia (untuk `deploy.php`).
 - User web server (mis. `www-data`) punya **izin tulis** ke folder `../` (untuk clone) dan ke folder instance (untuk menulis `_db_config.php`, `channels/`, `Library/`).
 - `deploy.sh` dapat dieksekusi: `chmod +x deploy.sh`.
+
+---
+
+## 0. Ping (health check + daftar instance)
+
+Mengembalikan daftar instance yang dikelola — yaitu folder sejajar `deploy` yang
+berisi `setup.php` (penanda hasil clone app-runner). Folder lain diabaikan.
+
+| Item   | Nilai                                                       |
+| ------ | ---------------------------------------------------------- |
+| Method | `GET` atau `POST`                                          |
+| URL    | `/deploy/ping.php`                                         |
+| Header | `X-API-Key: <API_KEY>` (atau query `?api_key=<API_KEY>`)  |
+
+```bash
+curl "https://server-anda/deploy/ping.php?api_key=<API_KEY>"
+```
+
+Respon:
+
+```json
+{
+  "status": "ok",
+  "time": "2026-06-15T14:45:18+08:00",
+  "count": 2,
+  "instances": [
+    { "name": "hello_world", "installed": true },
+    { "name": "shop_demo",   "installed": false }
+  ]
+}
+```
+
+`installed` = `true` bila instance sudah punya `_db_config.php` (sudah di-install).
 
 ---
 
@@ -238,6 +273,76 @@ Catatan:
 
 ---
 
+## 4. Uninstall (hapus instance permanen)
+
+Folder instance **selalu** dihapus. Database hanya di-drop bila `drop_database`
+bernilai `true`. Bila di-drop, prosesnya dijalankan **sebelum** folder dihapus
+karena butuh `_db_config.php` di dalam folder.
+
+| Item   | Nilai                    |
+| ------ | ------------------------ |
+| Method | `POST`                   |
+| URL    | `/deploy/uninstall.php`  |
+| Header | `X-API-Key: <API_KEY>`   |
+
+### Body
+
+| Field           | Wajib | Default | Keterangan                                            |
+| --------------- | ----- | ------- | ----------------------------------------------------- |
+| `instance_name` | ✅    | —       | Folder instance di `../`.                             |
+| `drop_database` | ➖    | `false` | `true` = ikut drop database; `false` = hapus folder saja. |
+
+### Hapus folder saja (database dipertahankan)
+
+```bash
+curl -X POST https://server-anda/deploy/uninstall.php \
+  -H "X-API-Key: <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"instance_name": "hello_world"}'
+```
+
+```json
+{
+  "status": "success",
+  "message": "Instance dihapus (folder saja, database dipertahankan).",
+  "instance_name": "hello_world",
+  "database_dropped": false,
+  "database": null
+}
+```
+
+### Hapus folder + database
+
+```bash
+curl -X POST https://server-anda/deploy/uninstall.php \
+  -H "X-API-Key: <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"instance_name": "hello_world", "drop_database": true}'
+```
+
+```json
+{
+  "status": "success",
+  "message": "Instance dihapus (folder + database).",
+  "instance_name": "hello_world",
+  "database_dropped": true,
+  "database": {
+    "ok": true,
+    "dropped": [
+      { "name": "hello_world", "type": "business" },
+      { "name": "hello_world_auth", "type": "auth" }
+    ],
+    "warnings": []
+  }
+}
+```
+
+> ⚠️ **Tidak bisa dibatalkan.** Saat `drop_database: true`, drop bersifat
+> best-effort (`DROP DATABASE IF EXISTS`); folder tetap dihapus walau ada
+> peringatan saat drop DB (mis. MySQL sedang mati) — lihat `database.warnings`.
+
+---
+
 ## Daftar Kode Status
 
 | HTTP  | Arti                                                        |
@@ -273,4 +378,8 @@ php setup.php install <config_url> --db-host=.. --db-name=.. --db-user=.. \
   --db-pass=.. --auth-db=.. --admin-user=.. --admin-pass=..
 php setup.php update  <config_url> --plan
 php setup.php update  <config_url> --apply --plan-token=.. --approve=0,1,2
+
+# Teardown
+php setup.php uninstall          # interaktif (konfirmasi y/n)
+php setup.php uninstall --yes    # non-interaktif (drop DB, JSON) — dipakai uninstall.php
 ```
