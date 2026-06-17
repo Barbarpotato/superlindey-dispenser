@@ -37,7 +37,9 @@ foreach (scandir($base) ?: [] as $entry) {
 }
 
 // Urutkan berdasarkan nama agar output stabil.
-usort($instances, fn($a, $b) => strcmp($a['name'], $b['name']));
+usort($instances, function ($a, $b) {
+    return strcmp($a['name'], $b['name']);
+});
 
 respond(200, [
     'status'    => 'ok',

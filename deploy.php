@@ -65,7 +65,7 @@ if ($exitCode !== 0) {
 // Dipicu hanya bila body menyertakan config_url; selain itu tetap clone-only.
 $installResult = null;
 if (isset($body['config_url'])) {
-    [$icode, $ijson] = run_install($instance, $body);
+    list($icode, $ijson) = run_install($instance, $body);
     $installResult = $ijson;
 
     if ($icode >= 400) {

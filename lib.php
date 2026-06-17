@@ -7,7 +7,7 @@
 // ====== KONFIGURASI ======
 // GANTI dengan key rahasia Anda (mis. hasil: openssl rand -hex 32).
 // Cukup diganti di SATU tempat ini untuk semua endpoint.
-const API_KEY = 'your-secret-key';
+const API_KEY = '12345';
 // =========================
 
 // PHP exec()/shell_exec() sering memakai PATH minim sehingga `php`/`git`/`bash`
@@ -15,14 +15,14 @@ const API_KEY = 'your-secret-key';
 const SAFE_PATH_EXPORT = 'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"; ';
 
 /** Emit JSON dan hentikan eksekusi. */
-function respond(int $httpCode, array $payload): void {
+function respond(int $httpCode, array $payload) {
     http_response_code($httpCode);
     echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
 /** Pastikan request POST + API key valid (header X-API-Key atau query ?api_key). */
-function require_post_with_api_key(): void {
+function require_post_with_api_key() {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         respond(405, ['status' => 'error', 'message' => 'Method tidak diizinkan. Gunakan POST.']);
     }
@@ -113,7 +113,7 @@ function run_install(string $instance, array $params): array {
 }
 
 /** Hapus direktori secara rekursif (dipakai untuk rollback clone yang gagal install). */
-function rrmdir(string $dir): void {
+function rrmdir(string $dir) {
     if (!is_dir($dir)) {
         return;
     }

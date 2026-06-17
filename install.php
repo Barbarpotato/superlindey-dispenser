@@ -23,5 +23,5 @@ require_post_with_api_key();
 $body     = read_request_body();
 $instance = valid_instance_name($body);
 
-[$code, $json] = run_install($instance, $body);
+list($code, $json) = run_install($instance, $body);
 respond($code, $json);

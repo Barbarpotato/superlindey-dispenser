@@ -64,5 +64,5 @@ if ($action === 'plan') {
     $cmd .= ' --approve='    . escapeshellarg(implode(',', $ids));
 }
 
-[$code, $json] = relay_setup_json($cmd);
+list($code, $json) = relay_setup_json($cmd);
 respond($code, $json);

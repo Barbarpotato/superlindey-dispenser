@@ -42,7 +42,7 @@ if ($dropDatabase) {
     $setup = $dir . '/setup.php';
     if (is_file($setup)) {
         $cmd = SAFE_PATH_EXPORT . 'php ' . escapeshellarg($setup) . ' uninstall --yes';
-        [, $dbResult] = relay_setup_json($cmd);
+        list(, $dbResult) = relay_setup_json($cmd);
     } else {
         $dbResult = ['ok' => false, 'warnings' => ['setup.php tidak ditemukan; melewati drop database.']];
     }
